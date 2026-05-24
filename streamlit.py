@@ -17,13 +17,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-os.environ["LANGSMITH_TRACING"] = "true"
-# os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
-os.environ["LANGSMITH_PROJECT"] = "Conversation with uploaded PDF"
-
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
-
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
+os.environ["LANGCHAIN_PROJECT"] = "Conversation with uploaded PDF"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 
 
 def select_model(have_api):
