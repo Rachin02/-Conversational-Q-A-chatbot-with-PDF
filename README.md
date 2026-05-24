@@ -130,10 +130,9 @@ Answer + updated chat history displayed
 
 ---
 
+
 ## 📸 Screenshot
-
-> *(Add a screenshot of your running app here)*
-
+   ![App Screenshot](assets/ss.png)
 ---
 
 ## ⚠️ Notes
