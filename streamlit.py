@@ -62,7 +62,7 @@ st.write("Upload PDF and chat with their content")
 have_api = st.sidebar.selectbox("Do you have your API key? ", options=["NO","YES"] )
 
 model = select_model(have_api)
-embedding = OpenAIEmbeddings(model = "text-embedding-3-large")
+embedding = OpenAIEmbeddings(model = "text-embedding-3-small")
 
 session_id = st.sidebar.text_input("Session ID [Optional]", value = "default")
 
