@@ -1,9 +1,11 @@
 import os
 import streamlit as st
+from pypdf import PdfReader
+from langchain_core.documents import Document
+
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI , OpenAIEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -88,17 +90,24 @@ if uploaded_files:
     documents = []
 
     for uploaded_file in uploaded_files:
-        tempPdf = "temp.pdf"
-        with open(tempPdf, "wb") as file:
-            file.write(uploaded_file.getvalue())
-            file_name = uploaded_file.name
 
-        loader = PyPDFLoader(tempPdf)
-        docs = loader.load()
-        documents.extend(docs)
+        pdf_reader = PdfReader(uploaded_file)
 
+        for i, page in enumerate(pdf_reader.pages):
 
-    # st.write(documents)
+            text = page.extract_text()
+
+            if text:
+
+                documents.append(
+                    Document(
+                        page_content=text,
+                        metadata={
+                            "source": uploaded_file.name,
+                            "page": i + 1
+                        }
+                    )
+                )
 
 
     # split and create embedding for the documents
