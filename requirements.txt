@@ -1,0 +1,11 @@
+langchain-openai
+langchain-groq
+langchain-google-genai
+langchain
+langchain-chroma
+langchain-community
+langchain-core
+python-dotenv
+streamlit
+pypdf
+langsmith[claude-agent-sdk]
