@@ -154,23 +154,6 @@ if uploaded_files:
           st.write(st.session_state.store)
           st.write(":orange[Chat History: ]")
           st.write(session_history.messages)
-
-    st.sidebar.markdown(
-        """
-        <div style="
-            background-color: #8dc6ff;
-            color: black;
-            padding: 7px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 200;
-        ">
-            Developed by Rachin
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-            
+          
 
 # streamlit run app.py
