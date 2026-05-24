@@ -17,14 +17,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
-os.environ["LANGCHAIN_PROJECT"] = "Conversation with uploaded PDF"
-os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+# os.environ["LANGCHAIN_TRACING_V2"] = "true"
+# os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
+# os.environ["LANGCHAIN_PROJECT"] = "Conversation with uploaded PDF"        # currently tracing is not working, I will work on it later.
+# os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 
-st.write("Tracing:", os.environ.get("LANGCHAIN_TRACING_V2"))
-st.write("Project:", os.environ.get("LANGCHAIN_PROJECT"))
-st.write("API Key Exists:", bool(os.environ.get("LANGCHAIN_API_KEY")))
 
 
 def select_model(have_api):
