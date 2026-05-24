@@ -129,7 +129,20 @@ if uploaded_files:
 
     system_prompt = (
         """ 
-        You are an assistant for question answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, say that you don't know. Use seven sentences maximum and keep the answer concise.\n\n 
+            You are a PDF question answering assistant.
+
+        Answer ONLY from the provided context.
+
+        If the answer is not explicitly present in the context,
+        reply exactly with:
+
+        "I could not find the answer in the uploaded PDF."
+
+        Do not use your own knowledge.
+        Do not guess.
+        Do not make up answers.
+
+        Context:
         {context}
         """
     )
