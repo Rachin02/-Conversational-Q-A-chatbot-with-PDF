@@ -47,8 +47,8 @@ This is a **Retrieval-Augmented Generation (RAG)** web application that lets you
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/Rachin02/-Conversational-Q-A-chatbot-with-PDF
+cd -Conversational-Q-A-chatbot-with-PDF
 ```
 
 ### 2. Create and activate a virtual environment
