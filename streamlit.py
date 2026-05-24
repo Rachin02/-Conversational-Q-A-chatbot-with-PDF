@@ -76,13 +76,15 @@ st.sidebar.markdown(
          
 
 
-if 'store' not in st.session_state:
-    st.session_state.store = {}
+
 
 uploaded_files = st.file_uploader("Choose a PDF file", type = "pdf", accept_multiple_files= True)
 
 
 if uploaded_files:
+    if 'store' not in st.session_state:
+        st.session_state.store = {}
+
     documents = []
 
     for uploaded_file in uploaded_files:
