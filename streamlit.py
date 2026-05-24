@@ -17,9 +17,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-os.environ["LANGSMITH_TRACING"] = "true"
-os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
-os.environ["LANGSMITH_PROJECT"] = "Conversation with uploaded PDF"
+# os.environ["LANGSMITH_TRACING"] = "true"
+# os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
+# os.environ["LANGSMITH_PROJECT"] = "Conversation with uploaded PDF"
+
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 
 
 
@@ -55,6 +60,24 @@ model = select_model(have_api)
 embedding = OpenAIEmbeddings()
 
 session_id = st.sidebar.text_input("Session ID [Optional]", value = "default")
+
+st.sidebar.markdown(
+        """
+        <div style="
+            background-color: #8dc6ff;
+            color: black;
+            padding: 7px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 200;
+        ">
+            Developed by Rachin
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+         
 
 
 if 'store' not in st.session_state:
@@ -154,6 +177,8 @@ if uploaded_files:
           st.write(st.session_state.store)
           st.write(":orange[Chat History: ]")
           st.write(session_history.messages)
-          
 
+   
+
+   
 # streamlit run app.py
