@@ -1,4 +1,7 @@
 import os
+import shutil
+import warnings
+import chromadb
 import streamlit as st
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -12,7 +15,7 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-
+warnings.filterwarnings("ignore")
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -44,6 +47,15 @@ def select_model(have_api):
 
     return llm
 
+def clear_old_data():
+    """Delete temp.pdf and the entire Chroma folder"""
+    
+    if os.path.exists("temp.pdf"):
+        os.remove("temp.pdf")         # ← wipe old temp file
+    
+    if os.path.exists("./chroma"):
+        shutil.rmtree("./chroma")   
+
 ## ---------------------------------------------------------------------------------------------------------------------------
 
 st.title("Conversational RAG with PDF upload and chat history")
@@ -52,7 +64,7 @@ st.write("Upload PDF and chat with their content")
 have_api = st.sidebar.selectbox("Do you have your API key? ", options=["NO","YES"] )
 
 model = select_model(have_api)
-embedding = OpenAIEmbeddings()
+embedding = OpenAIEmbeddings(model = "text-embedding-3-large")
 
 session_id = st.sidebar.text_input("Session ID [Optional]", value = "default")
 
@@ -72,38 +84,44 @@ st.sidebar.markdown(
         """,
         unsafe_allow_html=True
     )
-         
+
 
 
 if 'store' not in st.session_state:
     st.session_state.store = {}
 
+if "last_file_names" not in st.session_state:
+    st.session_state.last_file_names = []    
+
 uploaded_files = st.file_uploader("Choose a PDF file", type = "pdf", accept_multiple_files= True)
 
 
 if uploaded_files:
-    documents = []
+    current_file_names = [f.name for f in uploaded_files]
+    if current_file_names != st.session_state.last_file_names:
 
-    for uploaded_file in uploaded_files:
-        tempPdf = "temp.pdf"
-        with open(tempPdf, "wb") as file:
-            file.write(uploaded_file.getvalue())
-            file_name = uploaded_file.name
+            clear_old_data()   # 🗑️ wipe temp.pdf + chroma before processing new file
 
-        loader = PyPDFLoader(tempPdf)
-        docs = loader.load()
-        documents.extend(docs)
+            st.session_state.last_file_names = current_file_names
+            st.session_state.store = {}  
+            documents = []
 
+            for uploaded_file in uploaded_files:
+                tempPdf = "temp.pdf"
+                with open(tempPdf, "wb") as file:
+                    file.write(uploaded_file.getvalue())
+                    file_name = uploaded_file.name
 
-    # st.write(documents)
+                loader = PyPDFLoader(tempPdf)
+                docs = loader.load()
+                documents.extend(docs)
 
-
-    # split and create embedding for the documents
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 5000, chunk_overlap = 500)
-    final_docs = text_splitter.split_documents(documents)
-    vectorStore = Chroma.from_documents(documents=final_docs, embedding= embedding)
-    retriever = vectorStore.as_retriever()
-
+            # split and create embedding for the documents
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size = 5000, chunk_overlap = 500)
+            final_docs = text_splitter.split_documents(documents)
+            chroma_client = chromadb.EphemeralClient()
+            vectorStore = Chroma.from_documents(documents=final_docs, embedding= embedding,client= chroma_client, collection_name= session_id)
+            st.session_state.retriever = vectorStore.as_retriever()
 
    
     contextualize_q_system_prompt = (
@@ -121,13 +139,21 @@ if uploaded_files:
         ]
     )
 
-    history_aware_retriever = create_history_aware_retriever(model, retriever, contextualize_q_prompt)
+    history_aware_retriever = create_history_aware_retriever(model, st.session_state.retriever, contextualize_q_prompt)
 
 
     system_prompt = (
         """ 
-        You are an assistant for question answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, say that you don't know. Use seven sentences maximum and keep the answer concise.\n\n 
-        {context}
+            You are a PDF question-answering assistant.Answer ONLY from the provided context below.
+            Rules:
+            1. Do NOT use your own knowledge.
+            2. Do NOT guess.
+            3. If the answer is not explicitly found in the context, reply exactly:
+            "This information is not available in the uploaded PDF."
+            4. Keep the answer concise and accurate.
+
+            Context:
+            {context}
         """
     )
 

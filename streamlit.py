@@ -1,11 +1,12 @@
 import os
+import shutil
+import warnings
+import chromadb
 import streamlit as st
-from pypdf import PdfReader
-from langchain_core.documents import Document
-
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI , OpenAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -14,15 +15,11 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+warnings.filterwarnings("ignore")
+
 
 from dotenv import load_dotenv
 load_dotenv()
-
-
-# os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
-# os.environ["LANGCHAIN_PROJECT"] = "Conversation with uploaded PDF"        # currently tracing is not working, I will work on it later.
-# os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 
 
 
@@ -47,6 +44,16 @@ def select_model(have_api):
 
     return llm
 
+def clear_old_data():
+    """Delete temp.pdf and the entire Chroma folder"""
+    
+    if os.path.exists("temp.pdf"):
+        os.remove("temp.pdf")         # ← wipe old temp file
+    
+    if os.path.exists("./chroma"):
+        shutil.rmtree("./chroma")   
+
+
 ## ---------------------------------------------------------------------------------------------------------------------------
 
 st.title("Conversational RAG with PDF upload and chat history")
@@ -55,7 +62,7 @@ st.write("Upload PDF and chat with their content")
 have_api = st.sidebar.selectbox("Do you have your API key? ", options=["NO","YES"] )
 
 model = select_model(have_api)
-embedding = OpenAIEmbeddings()
+embedding = OpenAIEmbeddings(model = "text-embedding-3-large")
 
 session_id = st.sidebar.text_input("Session ID [Optional]", value = "default")
 
@@ -77,45 +84,45 @@ st.sidebar.markdown(
     )
          
 
+if 'store' not in st.session_state:
+        st.session_state.store = {}
 
+if "last_file_names" not in st.session_state:
+    st.session_state.last_file_names = []    
 
 
 uploaded_files = st.file_uploader("Choose a PDF file", type = "pdf", accept_multiple_files= True)
 
 
 if uploaded_files:
-    if 'store' not in st.session_state:
-        st.session_state.store = {}
+   
+    current_file_names = [f.name for f in uploaded_files]
+    if current_file_names != st.session_state.last_file_names:
 
-    documents = []
+            clear_old_data()   # 🗑️ wipe temp.pdf + chroma before processing new file
 
-    for uploaded_file in uploaded_files:
+            st.session_state.last_file_names = current_file_names
+            st.session_state.store = {}  
+            documents = []
 
-        pdf_reader = PdfReader(uploaded_file)
+            for uploaded_file in uploaded_files:
+                tempPdf = "temp.pdf"
+                with open(tempPdf, "wb") as file:
+                    file.write(uploaded_file.getvalue())
+                    file_name = uploaded_file.name
 
-        for i, page in enumerate(pdf_reader.pages):
+                loader = PyPDFLoader(tempPdf)
+                docs = loader.load()
+                documents.extend(docs)
 
-            text = page.extract_text()
+            # split and create embedding for the documents
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size = 5000, chunk_overlap = 500)
+            final_docs = text_splitter.split_documents(documents)
+            chroma_client = chromadb.EphemeralClient()
+            vectorStore = Chroma.from_documents(documents=final_docs, embedding= embedding,client= chroma_client, collection_name= session_id)
+            st.session_state.retriever = vectorStore.as_retriever()
 
-            if text:
-
-                documents.append(
-                    Document(
-                        page_content=text,
-                        metadata={
-                            "source": uploaded_file.name,
-                            "page": i + 1
-                        }
-                    )
-                )
-
-
-    # split and create embedding for the documents
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 5000, chunk_overlap = 500)
-    final_docs = text_splitter.split_documents(documents)
-    vectorStore = Chroma.from_documents(documents=final_docs, embedding= embedding)
-    retriever = vectorStore.as_retriever()
-
+   
 
    
     contextualize_q_system_prompt = (
@@ -133,26 +140,21 @@ if uploaded_files:
         ]
     )
 
-    history_aware_retriever = create_history_aware_retriever(model, retriever, contextualize_q_prompt)
+    history_aware_retriever = create_history_aware_retriever(model, st.session_state.retriever, contextualize_q_prompt)
 
 
     system_prompt = (
-        """ 
-            You are a PDF question answering assistant.
+      """ 
+            You are a PDF question-answering assistant.Answer ONLY from the provided context below.
+            Rules:
+            1. Do NOT use your own knowledge.
+            2. Do NOT guess.
+            3. If the answer is not explicitly found in the context, reply exactly:
+            "This information is not available in the uploaded PDF."
+            4. Keep the answer concise and accurate.
 
-        Answer ONLY from the provided context.
-
-        If the answer is not explicitly present in the context,
-        reply exactly with:
-
-        "I could not find the answer in the uploaded PDF."
-
-        Do not use your own knowledge.
-        Do not guess.
-        Do not make up answers.
-
-        Context:
-        {context}
+            Context:
+            {context}
         """
     )
 
