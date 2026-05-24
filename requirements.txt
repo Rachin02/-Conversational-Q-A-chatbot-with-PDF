@@ -9,3 +9,5 @@ python-dotenv
 streamlit
 pypdf
 langsmith[claude-agent-sdk]
+chromadb==0.4.24
+protobuf==3.20.3
