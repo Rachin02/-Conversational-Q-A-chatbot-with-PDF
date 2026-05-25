@@ -34,7 +34,7 @@ This is a **Retrieval-Augmented Generation (RAG)** web application that lets you
 |---|---|
 | UI | [Streamlit](https://streamlit.io) |
 | LLM Providers | OpenAI GPT, Google Gemini, Groq (LLaMA) |
-| Embeddings | OpenAI `text-embedding-3-large` |
+| Embeddings | OpenAI `text-embedding-3-small` |
 | RAG Framework | [LangChain](https://langchain.com) |
 | Vector Store | [ChromaDB](https://www.trychroma.com) |
 | PDF Loader | LangChain `PyPDFLoader` |
